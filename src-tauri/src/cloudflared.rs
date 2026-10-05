@@ -80,8 +80,8 @@ async fn _WaitForTunnel(Child: &mut tokio::process::Child, WaitForConfig: bool) 
 }
 
 fn _Nonce() -> String {
-    use rand::Rng;
-    let Bytes: [u8; 16] = rand::thread_rng().gen();
+    use rand::RngExt;
+    let Bytes: [u8; 16] = rand::rng().random();
     hex::encode(Bytes)
 }
 

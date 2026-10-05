@@ -304,10 +304,10 @@ impl AppState {
     }
 
     pub fn CreateSession(&self) -> String {
-        use rand::Rng;
+        use rand::RngExt;
 
-        let mut Rng = rand::thread_rng();
-        let Bytes: Vec<u8> = (0..32).map(|_| Rng.gen()).collect();
+        let mut Rng = rand::rng();
+        let Bytes: Vec<u8> = (0..32).map(|_| Rng.random()).collect();
         let Token = hex::encode(Bytes);
 
         let mut Held = self.Sessions.lock().unwrap();
@@ -632,6 +632,8 @@ pub fn run() {
     use Subsystem::Core;
     use Level::Info;
 
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     STARTED_AT.get_or_init(|| {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -685,8 +687,8 @@ pub fn run() {
         Voting: voting::Runtime::New(),
         Runtime: OnceLock::new(),
         Probe: {
-            use rand::Rng;
-            hex::encode(rand::thread_rng().gen::<[u8; 16]>())
+            use rand::RngExt;
+            hex::encode(rand::rng().random::<[u8; 16]>())
         },
         Traffic: Arc::new(server::traffic::Totals::default()),
         Showing: Mutex::new(None),

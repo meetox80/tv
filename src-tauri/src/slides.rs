@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use rand::RngCore;
+use rand::Rng;
 use rusqlite::{params, OptionalExtension};
 use serde_json::{json, Value};
 
@@ -79,7 +79,7 @@ fn _Now() -> i64 {
 
 fn _NewId(Bytes: usize) -> String {
     let mut Raw = vec![0u8; Bytes];
-    rand::rngs::OsRng.fill_bytes(&mut Raw);
+    rand::rand_core::UnwrapErr(rand::rngs::SysRng).fill_bytes(&mut Raw);
     hex::encode(Raw)
 }
 

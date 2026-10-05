@@ -530,17 +530,17 @@ impl Database {
         if let Some(Stored) = self.Get("vote_pepper").and_then(|H| hex::decode(H).ok()).filter(|B| B.len() == 32) {
             return Stored;
         }
-        use rand::RngCore;
+        use rand::Rng;
         let mut Fresh = vec![0u8; 32];
-        rand::rngs::OsRng.fill_bytes(&mut Fresh);
+        rand::rand_core::UnwrapErr(rand::rngs::SysRng).fill_bytes(&mut Fresh);
         self.Set("vote_pepper", &hex::encode(&Fresh));
         Fresh
     }
 
     fn GenerateHexKey() -> String {
-        use rand::Rng;
-        let mut Rng = rand::thread_rng();
-        let Bytes: Vec<u8> = (0..16).map(|_| Rng.gen()).collect();
+        use rand::RngExt;
+        let mut Rng = rand::rng();
+        let Bytes: Vec<u8> = (0..16).map(|_| Rng.random()).collect();
         hex::encode(Bytes)
     }
 

@@ -102,7 +102,7 @@ fn _Secret(Db: &Database) -> StaticSecret {
         return StaticSecret::from(Bytes);
     }
 
-    let Fresh = StaticSecret::random_from_rng(rand::rngs::OsRng);
+    let Fresh = StaticSecret::random_from_rng(&mut rand::rand_core::UnwrapErr(rand::rngs::SysRng));
     Db.SetSerialSecretKey(&_Encode(Fresh.as_bytes()));
     log!(Serial, Info, "generated a new device keypair");
     Fresh
@@ -115,7 +115,7 @@ pub fn EnsureKeypair(Db: &Database) -> ([u8; KEY_BYTES], String) {
 }
 
 pub fn Regenerate(Db: &Database) -> ([u8; KEY_BYTES], String) {
-    let Fresh = StaticSecret::random_from_rng(rand::rngs::OsRng);
+    let Fresh = StaticSecret::random_from_rng(&mut rand::rand_core::UnwrapErr(rand::rngs::SysRng));
     Db.SetSerialSecretKey(&_Encode(Fresh.as_bytes()));
     Db.SetSerialLastSeq(0);
 
@@ -181,10 +181,11 @@ fn _Open(State: &Arc<AppState>, Line: &[u8]) -> Result<Envelope, Failure> {
     let Cipher = XChaCha20Poly1305::new_from_slice(&Key)
         .map_err(|_| Failure::New("auth", "key setup failed"))?;
 
-    let Nonce = XNonce::from_slice(&Raw[..NONCE_BYTES]);
+    let Nonce = XNonce::try_from(&Raw[..NONCE_BYTES])
+        .map_err(|_| Failure::New("auth", "bad nonce"))?;
 
     let Plain = Cipher
-        .decrypt(Nonce, Payload { msg: &Raw[NONCE_BYTES..], aad: MAGIC })
+        .decrypt(&Nonce, Payload { msg: &Raw[NONCE_BYTES..], aad: MAGIC })
         .map_err(|_| Failure::New("auth", "authentication failed"))?;
 
     serde_json::from_slice::<Envelope>(&Plain)

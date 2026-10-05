@@ -5,7 +5,7 @@ use std::sync::{Mutex, OnceLock};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use base64::Engine;
-use rand::RngCore;
+use rand::Rng;
 use rusqlite::{params, OptionalExtension, Row};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -169,7 +169,7 @@ pub struct Runtime {
 impl Runtime {
     pub fn New() -> Self {
         let mut Ephemeral = [0u8; 32];
-        rand::rngs::OsRng.fill_bytes(&mut Ephemeral);
+        rand::rand_core::UnwrapErr(rand::rngs::SysRng).fill_bytes(&mut Ephemeral);
         Self {
             Activity: Activity::default(),
             Limits: Limiter::New(),
@@ -226,7 +226,7 @@ pub fn Now() -> i64 {
 
 pub fn NewToken() -> String {
     let mut Bytes = [0u8; TOKEN_BYTES];
-    rand::rngs::OsRng.fill_bytes(&mut Bytes);
+    rand::rand_core::UnwrapErr(rand::rngs::SysRng).fill_bytes(&mut Bytes);
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(Bytes)
 }
 
@@ -322,7 +322,7 @@ pub async fn VerifyCaptcha(Db: &Database, Response: &str, Ip: Option<&str>) -> R
     }
 
     let mut Idempotency = [0u8; 16];
-    rand::rngs::OsRng.fill_bytes(&mut Idempotency);
+    rand::rand_core::UnwrapErr(rand::rngs::SysRng).fill_bytes(&mut Idempotency);
     let IdempotencyKey = {
         let H = hex::encode(Idempotency);
         format!("{}-{}-4{}-a{}-{}", &H[0..8], &H[8..12], &H[13..16], &H[17..20], &H[20..32])

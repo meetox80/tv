@@ -66,6 +66,7 @@ async fn Run(Case: &str) {
 
 fn main() {
     log::_InstallPanicHook();
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let Case = std::env::args().nth(1).unwrap_or_else(|| "all".to_string());
     let Rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
     Rt.block_on(async {
