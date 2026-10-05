@@ -1,0 +1,30 @@
+{
+  "name": "zstio-tv",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/predev.cjs",
+    "dev": "vite",
+    "postdev": "bun run build",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-opener": "^2.5.4",
+    "qrcode": "^1.5.4",
+    "vue": "^3.5.41"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/qrcode": "^1.5.6",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.6.3",
+    "vite": "^6.4.3",
+    "vue-tsc": "^2.2.12"
+  }
+}

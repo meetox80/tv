@@ -1,0 +1,111 @@
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/fonts/SpaceGrotesk-Variable.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@import "tailwindcss";
+
+@layer base {
+  *, *::before, *::after {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  html, body {
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+
+@custom-variant tall (@media (min-height: 700px));
+
+@theme {
+  --color-surface: #000000;
+  --color-surface-raised: #0A0A0A;
+  --color-surface-overlay: #111111;
+  --color-surface-card: #0A0A0A;
+  --color-border: #27272A;
+  --color-border-subtle: #1C1C1E;
+  --color-border-active: #DC2626;
+  --color-text-primary: #FAFAFA;
+  --color-text-secondary: #A1A1AA;
+  --color-text-muted: #71717A;
+  --color-accent: #DC2626;
+  --color-accent-hover: #EF4444;
+  --color-accent-muted: #7F1D1D;
+  --color-accent-subtle: rgba(220, 38, 38, 0.08);
+  --color-danger-bg: rgba(220, 38, 38, 0.06);
+  --color-danger-border: rgba(220, 38, 38, 0.3);
+
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-timer: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-clock: "Inter", system-ui, sans-serif;
+
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-fade-in-up: fade-in-up 0.7s var(--ease-smooth) both;
+  --animate-scale-in: scale-in 0.6s var(--ease-smooth) both;
+  --animate-fade-in: fade-in 0.5s var(--ease-smooth) both;
+  --animate-pulse-slow: pulse-slow 3s ease-in-out infinite;
+  --animate-bar-grow: bar-grow 0.8s var(--ease-smooth) 0.05s both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}

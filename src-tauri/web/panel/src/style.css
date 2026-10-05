@@ -1,0 +1,353 @@
+@font-face {
+  font-family: "IBM Plex Serif";
+  src: url("/fonts/IBMPlexSerif-300-latin-ext.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  src: url("/fonts/IBMPlexSerif-300-latin.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  src: url("/fonts/IBMPlexSerif-400-latin-ext.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  src: url("/fonts/IBMPlexSerif-400-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  src: url("/fonts/IBMPlexSerif-500-latin-ext.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  src: url("/fonts/IBMPlexSerif-500-latin.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/fonts/SpaceGrotesk-Variable.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --bg: #050507;
+  --ink: #f4f2f7;
+  --ink-soft: #b9b5c6;
+  --ink-mute: #8f8a9b;
+  --ink-faint: #5d5868;
+  --rose: #e0a8a8;
+  --rose-light: #f1c6c6;
+  --rose-ink: #1d1113;
+  --wine: #7a1f1f;
+  --danger: #ef8a8a;
+  --good: #8fd9a8;
+  --warn: #e8c07a;
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-strong: rgba(255, 255, 255, 0.07);
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-strong: rgba(255, 255, 255, 0.14);
+  --line: rgba(255, 255, 255, 0.06);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+html, body, #app {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: "Inter", "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  background: var(--bg);
+  color: var(--ink);
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+@layer base {
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+::selection {
+  background: rgba(224, 168, 168, 0.3);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.Btn {
+  display: inline-flex;
+  height: 38px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  background: var(--glass-strong);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 180ms ease, box-shadow 180ms ease, color 180ms ease, opacity 180ms ease, transform 140ms ease;
+}
+
+.Btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px var(--edge-strong);
+}
+
+.Btn:active {
+  transform: scale(0.97);
+}
+
+.Btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+.Btn.Primary {
+  background: var(--ink);
+  font-weight: 600;
+  color: #0c0b0f;
+}
+
+.Btn.Primary:hover {
+  background: #fff;
+}
+
+.Btn.Primary:disabled {
+  opacity: 0.25;
+  box-shadow: none;
+}
+
+.Btn.Danger {
+  background: rgba(239, 138, 138, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(239, 138, 138, 0.18);
+  color: var(--danger);
+}
+
+.Btn.Danger:hover {
+  background: rgba(239, 138, 138, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(239, 138, 138, 0.28);
+}
+
+.Btn.Armed {
+  background: linear-gradient(180deg, #f3a3a3, #e07c7c);
+  box-shadow: 0 14px 34px -16px rgba(224, 124, 124, 0.7);
+  font-weight: 600;
+  color: #200c0c;
+}
+
+.Input {
+  height: 42px;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  padding: 0 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  transition: box-shadow 200ms ease, background 200ms ease;
+}
+
+.Input::placeholder {
+  color: var(--ink-faint);
+}
+
+.Input:hover {
+  box-shadow: inset 0 0 0 1px var(--edge-strong);
+}
+
+.Input:focus {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(224, 168, 168, 0.55), 0 0 0 4px rgba(224, 168, 168, 0.1);
+}
+
+.Input.Invalid {
+  box-shadow: inset 0 0 0 1px rgba(239, 138, 138, 0.6), 0 0 0 4px rgba(239, 138, 138, 0.1);
+}
+
+.Monospace {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  letter-spacing: -0.01em;
+}
+
+.Link {
+  color: var(--rose);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.Link:hover {
+  color: var(--rose-light);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.Fault {
+  color: var(--danger);
+}
+
+.Flow {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.Stretch {
+  flex: 1;
+  min-width: 0;
+}
+
+.Value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+  color: var(--ink-soft);
+}
+
+.Led {
+  display: inline-block;
+  height: 7px;
+  width: 7px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 300ms ease, box-shadow 300ms ease;
+}
+
+.Led.Good {
+  background: var(--good);
+}
+
+.Led.Warn {
+  background: var(--warn);
+}
+
+.Led.Busy {
+  animation: breathe 1.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.swap-enter-active {
+  transition: opacity 260ms ease, transform 420ms var(--ease);
+}
+
+.swap-leave-active {
+  transition: opacity 120ms ease;
+}
+
+.swap-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.swap-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 1023px) {
+  .Btn {
+    height: 42px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
+
+  .Input {
+    height: 46px;
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

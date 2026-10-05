@@ -1,0 +1,8 @@
+{
+  "Id": "hello-world",
+  "Name": "Hello World",
+  "Version": "1.0.0",
+  "Description": "Minimalna wtyczka: czerwony napis hello world w lewym górnym rogu panelu.",
+  "Panel": "panel.js",
+  "Server": "server.js"
+}

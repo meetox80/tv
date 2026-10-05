@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Tryb awaryjny</title>
+<style>
+:root {
+  --bg: #050507;
+  --panel: #0e0d11;
+  --ink: #f4f2f7;
+  --soft: #b9b5c6;
+  --mute: #8f8a9b;
+  --faint: #5d5868;
+  --line: rgba(255, 255, 255, 0.07);
+  --edge: rgba(255, 255, 255, 0.1);
+  --danger: #ef8a8a;
+  --good: #8fd9a8;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding: 64px 20px 80px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.Lead {
+  margin: 8px 0 32px;
+  color: var(--mute);
+}
+
+.Card {
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+  padding: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--mute);
+}
+
+input {
+  width: 100%;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  padding: 0 14px;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+input:focus {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+button,
+.Back {
+  display: inline-flex;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  padding: 0 14px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:hover,
+.Back:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+button.Primary {
+  background: var(--ink);
+  box-shadow: none;
+  color: #0c0b0f;
+}
+
+button.Danger {
+  color: var(--danger);
+}
+
+.Row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.Tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.Tools .Back {
+  margin-left: auto;
+}
+
+.Item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.Item + .Item {
+  border-top: 1px solid var(--line);
+}
+
+.Text {
+  min-width: 0;
+  flex: 1;
+}
+
+.Name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.Meta {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.Description {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--soft);
+}
+
+.Problem {
+  margin: 10px 0 0;
+  border-radius: 10px;
+  background: rgba(239, 138, 138, 0.07);
+  padding: 10px 12px;
+  font: 12.5px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--danger);
+}
+
+.State {
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.State.On {
+  color: var(--good);
+}
+
+.Side {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.Empty {
+  margin: 0;
+  color: var(--mute);
+}
+
+.Status {
+  min-height: 22px;
+  margin: 14px 2px 0;
+  font-size: 13.5px;
+  color: var(--mute);
+}
+
+.Status.Bad {
+  color: var(--danger);
+}
+
+[hidden] {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Tryb awaryjny</h1>
+  <p class="Lead">Tutaj wtyczki nigdy się nie wczytują, więc zawsze możesz je wyłączyć lub włączyć, nawet gdy panel przestał działać.</p>
+
+  <form id="Login" class="Card" hidden>
+    <label for="Password">Hasło do panelu</label>
+    <input id="Password" type="password" autocomplete="current-password" required>
+    <div class="Row">
+      <button type="submit" class="Primary">Zaloguj się</button>
+    </div>
+  </form>
+
+  <section id="Manager" hidden>
+    <div class="Tools">
+      <button id="DisableAll" type="button" class="Danger">Wyłącz wszystkie</button>
+      <button id="Rescan" type="button">Wczytaj ponownie</button>
+      <a class="Back" href="/">Wróć do panelu</a>
+    </div>
+    <div id="List" class="Card"></div>
+  </section>
+
+  <p id="Status" class="Status" role="status"></p>
+</main>
+
+<script>
+(() => {
+  const SessionKey = "panel_session"
+  const SessionMs = 15 * 60 * 1000
+
+  const LoginEl = document.getElementById("Login")
+  const PasswordEl = document.getElementById("Password")
+  const ManagerEl = document.getElementById("Manager")
+  const ListEl = document.getElementById("List")
+  const StatusEl = document.getElementById("Status")
+
+  function Say(Text, Bad) {
+    StatusEl.textContent = Text || ""
+    StatusEl.classList.toggle("Bad", !!Bad)
+  }
+
+  function ReadToken() {
+    try {
+      const Stored = JSON.parse(sessionStorage.getItem(SessionKey) || "null")
+      if (Stored && typeof Stored.Token === "string" && Stored.ExpiresAt > Date.now()) return Stored.Token
+    } catch {}
+    return null
+  }
+
+  function SaveToken(Token) {
+    try {
+      sessionStorage.setItem(SessionKey, JSON.stringify({ Token, ExpiresAt: Date.now() + SessionMs }))
+    } catch {}
+  }
+
+  function ClearToken() {
+    try {
+      sessionStorage.removeItem(SessionKey)
+    } catch {}
+  }
+
+  function ShowLogin() {
+    ManagerEl.hidden = true
+    LoginEl.hidden = false
+    PasswordEl.focus()
+  }
+
+  async function Call(Path, Body) {
+    const Token = ReadToken()
+    if (!Token) {
+      ShowLogin()
+      throw new Error("login")
+    }
+    const Init = { headers: { Authorization: "Bearer " + Token } }
+    if (Body !== undefined) {
+      Init.method = "POST"
+      Init.headers["Content-Type"] = "application/json"
+      Init.body = JSON.stringify(Body)
+    }
+    const Res = await fetch(Path, Init)
+    if (Res.status === 401) {
+      ClearToken()
+      ShowLogin()
+      Say("Sesja wygasła. Zaloguj się ponownie.", true)
+      throw new Error("login")
+    }
+    if (!Res.ok) throw new Error("status " + Res.status)
+    const Type = Res.headers.get("content-type") || ""
+    return Type.includes("application/json") ? Res.json() : null
+  }
+
+  function Line(Tag, Class, Text) {
+    const El = document.createElement(Tag)
+    El.className = Class
+    El.textContent = Text
+    return El
+  }
+
+  function Render(Items) {
+    ListEl.replaceChildren()
+    if (!Items.length) {
+      ListEl.append(Line("p", "Empty", "Brak zainstalowanych wtyczek."))
+      return
+    }
+    for (const Item of Items) {
+      const Row = document.createElement("div")
+      Row.className = "Item"
+
+      const Text = document.createElement("div")
+      Text.className = "Text"
+      Text.append(Line("p", "Name", Item.Name))
+      Text.append(Line("p", "Meta", Item.Id + " · " + Item.Version))
+      if (Item.Description) Text.append(Line("p", "Description", Item.Description))
+      if (Item.Error) Text.append(Line("pre", "Problem", Item.Error))
+
+      const Side = document.createElement("div")
+      Side.className = "Side"
+      const State = Line("span", "State" + (Item.Enabled ? " On" : ""), Item.Enabled ? "Włączona" : "Wyłączona")
+      const Switch = Line("button", Item.Enabled ? "Danger" : "Primary", Item.Enabled ? "Wyłącz" : "Włącz")
+      Switch.type = "button"
+      Switch.addEventListener("click", () => Toggle(Item, Switch))
+      Side.append(State, Switch)
+
+      Row.append(Text, Side)
+      ListEl.append(Row)
+    }
+  }
+
+  async function Refresh() {
+    try {
+      Render((await Call("/api/extensions")).Items)
+      LoginEl.hidden = true
+      ManagerEl.hidden = false
+    } catch (E) {
+      if (E.message !== "login") Say("Nie udało się pobrać listy wtyczek.", true)
+    }
+  }
+
+  async function Toggle(Item, Button) {
+    Button.disabled = true
+    try {
+      await Call("/api/extensions/" + encodeURIComponent(Item.Id), { Enabled: !Item.Enabled })
+      Say(Item.Enabled ? "Wyłączono „" + Item.Name + "”. Odśwież panel, aby zobaczyć zmiany." : "Włączono „" + Item.Name + "”. Odśwież panel, aby zobaczyć zmiany.")
+      await Refresh()
+    } catch (E) {
+      Button.disabled = false
+      if (E.message !== "login") Say("Nie udało się zmienić stanu wtyczki.", true)
+    }
+  }
+
+  document.getElementById("DisableAll").addEventListener("click", async (Event) => {
+    const Button = Event.currentTarget
+    Button.disabled = true
+    try {
+      await Call("/api/extensions/disable", {})
+      Say("Wyłączono wszystkie wtyczki.")
+      await Refresh()
+    } catch (E) {
+      if (E.message !== "login") Say("Nie udało się wyłączyć wtyczek.", true)
+    } finally {
+      Button.disabled = false
+    }
+  })
+
+  document.getElementById("Rescan").addEventListener("click", async (Event) => {
+    const Button = Event.currentTarget
+    Button.disabled = true
+    try {
+      Render((await Call("/api/extensions/reload", {})).Items)
+      Say("Wczytano wtyczki ponownie.")
+    } catch (E) {
+      if (E.message !== "login") Say("Nie udało się wczytać wtyczek.", true)
+    } finally {
+      Button.disabled = false
+    }
+  })
+
+  LoginEl.addEventListener("submit", async (Event) => {
+    Event.preventDefault()
+    Say("")
+    try {
+      const Res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ Password: PasswordEl.value }),
+      })
+      if (!Res.ok) {
+        Say("Nieprawidłowe hasło.", true)
+        PasswordEl.select()
+        return
+      }
+      const Data = await Res.json()
+      SaveToken(Data.Token)
+      PasswordEl.value = ""
+      await Refresh()
+    } catch {
+      Say("Nie udało się połączyć z serwerem.", true)
+    }
+  })
+
+  if (ReadToken()) Refresh()
+  else ShowLogin()
+})()
+</script>
+</body>
+</html>

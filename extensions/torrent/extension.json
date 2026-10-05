@@ -1,0 +1,7 @@
+{
+  "Id": "torrent",
+  "Name": "Torrent",
+  "Version": "1.0.0",
+  "Description": "Strona /torrent: upuść plik .torrent i zobacz, co jest w środku.",
+  "Panel": "panel.js"
+}

@@ -1,0 +1,1 @@
+malo periculosam libertatem quam quietum servitium
