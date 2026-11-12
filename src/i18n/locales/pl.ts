@@ -1,6 +1,6 @@
 const _Pl: Record<string, string> = {
   "start.downloading": "Pobieranie cloudflared",
-  "start.open_address": "Otwórz ten adres na urządzeniu z Cloudflare",
+  "start.open_address": "Otwórz ten adres na urządzeniu z dostępem do konta Cloudflare",
   "start.failed": "Pobieranie nie powiodło się",
   "start.retry": "Spróbuj ponownie",
   "start.show_code": "Wróć do kodu",
