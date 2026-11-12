@@ -10,6 +10,7 @@ interface InkGlyph {
 }
 
 type SetupPhase = "code" | "token" | "verifying" | "ports" | "password" | "done"
+type IconPhase = "token" | "ports" | "password" | "done"
 
 const Emit = defineEmits<{
   Done: []
@@ -17,6 +18,25 @@ const Emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+const _StageIcons: Record<IconPhase, string[]> = {
+  token: [
+    "M12 15a4 4 0 1 1-8 0a4 4 0 0 1 8 0z",
+    "M10.8 12.2 20 3",
+    "m15.5 7.5 2 2",
+    "m18 5 2 2",
+  ],
+  ports: [
+    "M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0z",
+    "M3 12h18",
+    "M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z",
+  ],
+  password: [
+    "M7 10.5h10a2.5 2.5 0 0 1 2.5 2.5v5.5A2.5 2.5 0 0 1 17 21H7a2.5 2.5 0 0 1-2.5-2.5V13A2.5 2.5 0 0 1 7 10.5z",
+    "M8 10.5V7.5a4 4 0 0 1 8 0v3",
+  ],
+  done: ["m5 12.5 4.5 4.5L19 7.5"],
+}
 
 const Phase: Ref<SetupPhase> = ref("code")
 const PairingCode: Ref<string> = ref("")
@@ -49,6 +69,10 @@ const StageSubtitle: ComputedRef<string> = computed(() => {
     default: return t("setup.code_label")
   }
 })
+
+const StageIcon: ComputedRef<string[]> = computed(() =>
+  Phase.value === "code" || Phase.value === "verifying" ? [] : _StageIcons[Phase.value]
+)
 
 const ProgressStep: ComputedRef<number> = computed(() => {
   switch (Phase.value) {
@@ -257,7 +281,7 @@ onUnmounted(() => {
           </svg>
 
           <div class="mt-10 tall:mt-12 min-h-16 flex flex-col items-center justify-start" :class="{ Vanish: Leaving }">
-            <p class="font-mono text-sm tall:text-base tracking-[0.18em] text-[#B9B5C6] text-center">
+            <p class="font-body text-base tall:text-lg tracking-[-0.008em] text-[#B9B5C6] text-center">
               {{ StageSubtitle }}
             </p>
 
@@ -271,13 +295,50 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-else key="progress" class="MinimalProgress">
-          <div class="ProgressHeader">
-            <span>{{ StageTitle }}</span>
-            <span class="ProgressPercent">{{ ProgressPercent }}%</span>
-          </div>
+        <div v-else key="progress" class="flex w-full flex-col items-center text-center">
+          <Transition name="swap" mode="out-in">
+            <div :key="Phase" class="flex flex-col items-center">
+              <div class="StageTile" :class="{ StageDone: Phase === 'done' }">
+                <svg v-if="Phase === 'verifying'" class="StageActivity" viewBox="0 0 24 24" aria-hidden="true">
+                  <line
+                    v-for="Spoke in 8"
+                    :key="Spoke"
+                    x1="12"
+                    y1="2.75"
+                    x2="12"
+                    y2="6.75"
+                    stroke="currentColor"
+                    stroke-width="2.1"
+                    stroke-linecap="round"
+                    :opacity="1 - (Spoke - 1) * 0.11"
+                    :transform="`rotate(${-(Spoke - 1) * 45} 12 12)`"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  class="StageIcon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  :stroke-width="Phase === 'done' ? 2.2 : 1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path v-for="D in StageIcon" :key="D" :d="D" :class="{ StageCheck: Phase === 'done' }" />
+                </svg>
+              </div>
 
-          <div class="ProgressTrack" role="progressbar" :aria-valuenow="ProgressPercent" aria-valuemin="0" aria-valuemax="100">
+              <h1 class="mt-8 tall:mt-10 font-body text-4xl tall:text-5xl font-semibold tracking-[-0.025em] text-[#F4F2F7]">
+                {{ StageTitle }}
+              </h1>
+              <p class="mt-4 font-body text-lg tall:text-xl tracking-[-0.008em] text-[#B9B5C6]">
+                {{ StageSubtitle }}
+              </p>
+            </div>
+          </Transition>
+
+          <div class="ProgressTrack mt-12 tall:mt-14" role="progressbar" :aria-valuenow="ProgressPercent" aria-valuemin="0" aria-valuemax="100">
             <span
               v-for="Step in 4"
               :key="Step"
@@ -285,8 +346,6 @@ onUnmounted(() => {
               :class="{ Filled: Step <= ProgressStep }"
             />
           </div>
-
-          <p class="ProgressSubtitle">{{ StageSubtitle }}</p>
         </div>
       </Transition>
     </div>
@@ -298,57 +357,92 @@ onUnmounted(() => {
   background: #0b0b0c;
 }
 
-.MinimalProgress {
-  width: min(26rem, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-  padding: 0 1.5rem;
-}
-
-.ProgressHeader {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
+.StageTile {
+  display: grid;
+  width: 6rem;
+  height: 6rem;
+  place-items: center;
+  border-radius: 1.75rem;
+  background: linear-gradient(180deg, #2a2a2e 0%, #1a1a1d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 24px 48px -24px rgba(0, 0, 0, 0.9);
   color: #f4f2f7;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
 }
 
-.ProgressPercent {
-  color: #e0a8a8;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+.StageDone {
+  background: rgba(48, 209, 88, 0.14);
+  box-shadow: none;
+  color: #30d158;
+}
+
+.StageIcon {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.StageActivity {
+  width: 2.5rem;
+  height: 2.5rem;
+  animation: StageSpin 0.85s steps(8) infinite;
+}
+
+.StageCheck {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: StageDraw 500ms 200ms ease forwards;
+}
+
+@keyframes StageSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes StageDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .ProgressTrack {
   display: flex;
-  gap: 0.35rem;
-  width: 100%;
+  width: min(22rem, 100%);
+  gap: 0.5rem;
 }
 
 .ProgressSegment {
-  height: 0.22rem;
+  height: 0.3rem;
   flex: 1;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
   transition: background-color 450ms var(--ease-smooth);
 }
 
 .ProgressSegment.Filled {
-  background: #e0a8a8;
+  background: #f4f2f7;
 }
 
-.ProgressSubtitle {
-  margin: 0;
-  color: #8f8a9b;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-align: center;
+@media (min-height: 700px) {
+  .StageTile {
+    width: 7rem;
+    height: 7rem;
+    border-radius: 2rem;
+  }
+
+  .StageIcon {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .StageActivity {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .ProgressTrack {
+    width: min(26rem, 100%);
+  }
 }
 
 text {
@@ -400,18 +494,18 @@ text {
 .BackLink {
   display: inline-flex;
   align-items: center;
-  gap: 0.65em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.18em;
-  color: #a8908e;
+  gap: 0.55em;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: rgba(244, 242, 247, 0.6);
   background: transparent;
   cursor: pointer;
   transition: color 0.3s ease;
 }
 
 .BackLink:hover {
-  color: #edebf2;
+  color: #f4f2f7;
 }
 
 .BackArrow {
@@ -439,20 +533,20 @@ text {
 }
 
 .swap-enter-active {
-  transition: opacity 0.6s var(--ease-smooth) 0.1s, transform 0.6s var(--ease-smooth) 0.1s;
+  transition: opacity 0.5s var(--ease-smooth) 0.05s, transform 0.5s var(--ease-smooth) 0.05s;
 }
 
 .swap-leave-active {
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .swap-enter-from {
   opacity: 0;
-  transform: translateY(-18px);
+  transform: translateY(14px);
 }
 
 .swap-leave-to {
   opacity: 0;
-  transform: translateY(22px);
+  transform: translateY(-10px);
 }
 </style>
