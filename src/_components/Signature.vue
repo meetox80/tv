@@ -11,7 +11,9 @@ function _OpenProfile(): void {
 <template>
   <button type="button" class="Signature" @click="_OpenProfile">
     <span class="Wing WingLeft">made with</span>
-    <span class="Heart">&#9829;</span>
+    <svg class="Heart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 20.5c-.3 0-.6-.1-.8-.3C7.4 17 3 13.3 3 8.9 3 6.2 5.1 4 7.7 4c1.7 0 3.2.9 4.3 2.4C13.1 4.9 14.6 4 16.3 4 18.9 4 21 6.2 21 8.9c0 4.4-4.4 8.1-8.2 11.3-.2.2-.5.3-.8.3z" />
+    </svg>
     <span class="Wing WingRight">by kotwicha</span>
   </button>
 </template>
@@ -57,9 +59,10 @@ function _OpenProfile(): void {
 }
 
 .Heart {
-  color: #a8908e;
-  font-size: 0.875rem;
-  line-height: 1;
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  color: #f4f2f7;
 }
 
 .Signature:hover .Wing {
