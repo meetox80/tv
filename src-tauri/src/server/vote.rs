@@ -97,6 +97,11 @@ fn _ExpectedOrigin(AppState: &AppState) -> Option<String> {
     (!Host.is_empty()).then(|| format!("https://{}", Host))
 }
 
+fn _Localhost(Origin: &str) -> bool {
+    let Origin = Origin.to_ascii_lowercase();
+    Origin == "http://localhost" || Origin.starts_with("http://localhost:")
+}
+
 pub async fn Guard(State(AppState): State<Arc<AppState>>, Req: Request, Next: Next) -> Response {
     if Req.method() != Method::GET && Req.method() != Method::HEAD {
         let Headers = Req.headers();
@@ -115,7 +120,7 @@ pub async fn Guard(State(AppState): State<Arc<AppState>>, Req: Request, Next: Ne
             Some(Expected) => Headers
                 .get(header::ORIGIN)
                 .and_then(|V| V.to_str().ok())
-                .is_some_and(|O| O.eq_ignore_ascii_case(&Expected)),
+                .is_some_and(|O| O.eq_ignore_ascii_case(&Expected) || (cfg!(debug_assertions) && _Localhost(O))),
             None => true,
         };
 

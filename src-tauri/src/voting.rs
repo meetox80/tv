@@ -363,7 +363,7 @@ pub async fn VerifyCaptcha(Db: &Database, Response: &str, Ip: Option<&str>) -> R
 
     let Expected = crate::cloudflared::NormalizeHostname(&Db.GetVotingHostname());
     let Actual = Body["hostname"].as_str().unwrap_or("").to_lowercase();
-    if !Expected.is_empty() && Actual != Expected {
+    if !Expected.is_empty() && Actual != Expected && !(cfg!(debug_assertions) && Actual == "localhost") {
         return Err(format!("hostname mismatch: {}", Actual));
     }
 
