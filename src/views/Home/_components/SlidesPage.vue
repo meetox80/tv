@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { ElementStyle, SlideHeight, SlideWidth, type Slide } from "./slides"
+import { ElementStyle, SlideAssetBase, SlideHeight, SlideWidth, type Slide } from "./slides"
 
 defineProps<{ Slide: Slide }>()
-
-const _AssetBase = "http://127.0.0.1:9999/api/slides/assets"
 </script>
 
 <template>
@@ -17,7 +15,7 @@ const _AssetBase = "http://127.0.0.1:9999/api/slides/assets"
         <p v-if="Element.Kind === 'text'" :style="ElementStyle(Element)">{{ Element.Text }}</p>
         <div v-else-if="Element.Kind === 'image'" :style="ElementStyle(Element)">
           <img
-            :src="`${_AssetBase}/${Element.Asset}`"
+            :src="`${SlideAssetBase}/${Element.Asset}`"
             alt=""
             class="Image"
             :style="{ objectFit: Element.Fit ?? 'cover' }"

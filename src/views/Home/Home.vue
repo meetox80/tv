@@ -12,8 +12,9 @@ import Backdrop from "./_components/Backdrop.vue"
 import Clock from "./_components/Clock.vue"
 import Skeleton from "./_components/Skeleton.vue"
 import { ReadWeather, type WeatherConfig } from "./_components/weather"
-import type { Slide, SlideCollection } from "./_components/slides"
+import { SlideImages, type Slide, type SlideCollection } from "./_components/slides"
 import { Timeline, Resolve, type Schedule } from "./_schedule"
+import { Preload, Decoded } from "./_images"
 
 interface Track {
   Title: string
@@ -80,7 +81,8 @@ const _DefaultRotation: ScreenPage[] = [
 ]
 const _MinuteMs = 60 * 1000
 const _HoldMs = 700
-const _CoverWaitMs = 2500
+const _ImageWaitMs = 2500
+const _TrackWaitMs = 3000
 
 
 const ShownTrack: Ref<Track | null> = ref(null)
@@ -116,6 +118,11 @@ function _Fit(): void {
 
 let _Listeners: UnlistenFn[] = []
 let _CoverToken = 0
+let _BoardToken = 0
+let _NewsToken = 0
+let _SlidesToken = 0
+let _PendingTrack: Track | null = null
+let _PendingTimer: ReturnType<typeof setTimeout> | null = null
 let _WeatherTimer: ReturnType<typeof setInterval> | null = null
 let _BoardTimer: ReturnType<typeof setInterval> | null = null
 let _PageTimer: ReturnType<typeof setTimeout> | null = null
@@ -143,20 +150,56 @@ async function _FetchBpm(): Promise<void> {
   }
 }
 
-function _ApplyTrack(Next: Track | null): void {
+function _SameTrack(A: Track | null, B: Track | null): boolean {
+  return !!A && !!B && A.Title === B.Title && A.Artist === B.Artist
+}
+
+function _StopPendingTimer(): void {
+  if (!_PendingTimer) return
+  clearTimeout(_PendingTimer)
+  _PendingTimer = null
+}
+
+function _ShowTrack(Next: Track): void {
+  ShownTrack.value = Next
+  Bpm.value = null
+  void _FetchBpm()
+}
+
+function _FlushTrack(Cover: string | null): void {
+  const Next = _PendingTrack
   if (!Next) return
 
-  const Changed =
-    !ShownTrack.value ||
-    ShownTrack.value.Title !== Next.Title ||
-    ShownTrack.value.Artist !== Next.Artist
+  _PendingTrack = null
+  _StopPendingTimer()
+  ShownCover.value = Cover
+  _ShowTrack(Next)
+}
 
-  ShownTrack.value = Next
+function _ApplyTrack(Next: Track | null, Immediate = false): void {
+  if (!Next) return
 
-  if (Changed) {
-    Bpm.value = null
-    void _FetchBpm()
+  if (_SameTrack(Next, ShownTrack.value)) {
+    _PendingTrack = null
+    _StopPendingTimer()
+    return
   }
+
+  if (Immediate) {
+    _ShowTrack(Next)
+    return
+  }
+
+  if (_SameTrack(Next, _PendingTrack)) return
+
+  _PendingTrack = Next
+  _StopPendingTimer()
+  _PendingTimer = setTimeout(() => _FlushTrack(null), _TrackWaitMs)
+}
+
+function _RevealCover(Cover: string | null): void {
+  if (_PendingTrack) _FlushTrack(Cover)
+  else ShownCover.value = Cover
 }
 
 const _Line = computed(() => Timeline(Lessons.value))
@@ -245,13 +288,29 @@ watch(Pages, (Next, Prev) => {
   PageTick.value += 1
 })
 
-function _ApplyBoard(Next: VotingBoard | null): void {
-  Board.value = Next
+async function _ApplyBoard(Next: VotingBoard | null): Promise<void> {
+  const Token = ++_BoardToken
+
+  if (!Next) {
+    Board.value = Next
+    return
+  }
+
+  const States = await Preload("board", Next.Songs.map(Song => Song.Cover), _ImageWaitMs)
+  if (Token !== _BoardToken) return
+
+  Board.value = {
+    ...Next,
+    Songs: Next.Songs.map(Song => ({
+      ...Song,
+      Cover: Song.Cover && States.get(Song.Cover) !== "failed" ? Song.Cover : null,
+    })),
+  }
 }
 
 async function _FetchBoard(): Promise<void> {
   try {
-    _ApplyBoard(await invoke<VotingBoard>("get_voting_board"))
+    await _ApplyBoard(await invoke<VotingBoard>("get_voting_board"))
   } catch {}
 }
 
@@ -289,25 +348,39 @@ function _Paragraphs(Html: string): string[] {
   return Out
 }
 
-function _ApplyNews(Cached: CachedPost | null): void {
+async function _ApplyNews(Cached: CachedPost | null): Promise<void> {
   if (!Cached) return
 
   const Title = _Decode(Cached.Title)
   if (!Title) return
 
+  const Token = ++_NewsToken
+  const States = await Preload("news", [Cached.Image], _ImageWaitMs)
+  if (Token !== _NewsToken) return
+
   Article.value = {
     Id: Cached.Id,
     Title,
     Date: Cached.Date,
-    Image: Cached.Image,
+    Image: Cached.Image && States.get(Cached.Image) !== "failed" ? Cached.Image : null,
     Body: _Paragraphs(Cached.Content),
   }
 }
 
 async function _FetchNews(): Promise<void> {
   try {
-    _ApplyNews(await invoke<CachedPost | null>("get_news"))
+    await _ApplyNews(await invoke<CachedPost | null>("get_news"))
   } catch {}
+}
+
+async function _ApplySlides(Next: SlideCollection[] | null): Promise<void> {
+  const Token = ++_SlidesToken
+  const List = Next ?? []
+
+  await Preload("slides", SlideImages(List), _ImageWaitMs)
+  if (Token !== _SlidesToken) return
+
+  Collections.value = List
 }
 
 async function _FetchLessons(): Promise<void> {
@@ -329,22 +402,6 @@ function _ApplyScreen(Config: ScreenConfig | null): void {
   void _FetchLessons()
 }
 
-async function _Preload(Url: string): Promise<boolean> {
-  const Img = new Image()
-  Img.src = Url
-
-  try {
-    if (Img.decode) await Img.decode()
-    else await new Promise((Resolve, Reject) => {
-      Img.onload = Resolve
-      Img.onerror = Reject
-    })
-    return true
-  } catch {
-    return false
-  }
-}
-
 function _Wait(Ms: number): Promise<void> {
   return new Promise(Resolve => setTimeout(Resolve, Ms))
 }
@@ -361,27 +418,38 @@ function _Frames(Count: number): Promise<void> {
 
 async function _Settle(): Promise<void> {
   const Cover = CoverUrl.value
-  const Art = Cover ? Promise.race([_Preload(Cover), _Wait(_CoverWaitMs)]) : Promise.resolve()
+  const Art = Cover ? Preload("cover", [Cover], _ImageWaitMs) : Promise.resolve()
   const Hold = _Wait(Math.max(0, _HoldMs - (performance.now() - _Opened)))
   await Promise.all([Art, Hold])
   await _Frames(2)
 }
 
-watch(CoverUrl, async (Next) => {
+async function _ApplyCover(Next: string | null): Promise<void> {
+  CoverUrl.value = Next
   const Token = ++_CoverToken
 
   if (!Next) {
-    ShownCover.value = null
+    _RevealCover(null)
     return
   }
 
-  if (Next === ShownCover.value) return
+  if (Next === ShownCover.value && !_PendingTrack) return
 
-  const Ready = await _Preload(Next)
+  const States = await Preload("cover", [Next], _ImageWaitMs)
   if (Token !== _CoverToken) return
 
-  ShownCover.value = Ready ? Next : null
-})
+  const State = States.get(Next)
+  if (State !== "pending") {
+    _RevealCover(State === "ready" ? Next : null)
+    return
+  }
+
+  _FlushTrack(null)
+  const Loaded = await Decoded(Next)
+  if (Token !== _CoverToken) return
+
+  ShownCover.value = Loaded ? Next : null
+}
 
 const _FullscreenKeys = ["f11", "f", "escape"]
 
@@ -400,11 +468,11 @@ onMounted(async () => {
   }))
 
   _Listeners.push(await listen<string | null>("cover-changed", (E) => {
-    CoverUrl.value = E.payload
+    void _ApplyCover(E.payload)
   }))
 
   _Listeners.push(await listen<VotingBoard>("voting-changed", (E) => {
-    _ApplyBoard(E.payload)
+    void _ApplyBoard(E.payload)
   }))
 
   _Listeners.push(await listen<ScreenConfig>("screen-changed", (E) => {
@@ -412,23 +480,23 @@ onMounted(async () => {
   }))
 
   _Listeners.push(await listen<CachedPost | null>("news-changed", (E) => {
-    _ApplyNews(E.payload)
+    void _ApplyNews(E.payload)
   }))
 
   _Listeners.push(await listen<SlideCollection[]>("slides-changed", (E) => {
-    Collections.value = E.payload ?? []
+    void _ApplySlides(E.payload)
   }))
 
   try {
-    Collections.value = await invoke<SlideCollection[]>("get_slides")
+    await _ApplySlides(await invoke<SlideCollection[]>("get_slides"))
   } catch {}
 
   try {
-    _ApplyTrack(await invoke<Track | null>("get_current_track"))
+    _ApplyTrack(await invoke<Track | null>("get_current_track"), true)
   } catch {}
 
   try {
-    CoverUrl.value = await invoke<string | null>("get_cover_url")
+    void _ApplyCover(await invoke<string | null>("get_cover_url"))
   } catch {}
 
   try {
@@ -453,6 +521,7 @@ onUnmounted(() => {
   if (_BoardTimer) clearInterval(_BoardTimer)
   if (_PageTimer) clearTimeout(_PageTimer)
   if (_ClockTimer) clearTimeout(_ClockTimer)
+  _StopPendingTimer()
   window.removeEventListener("keydown", _OnKeyDown)
   window.removeEventListener("resize", _Fit)
 })

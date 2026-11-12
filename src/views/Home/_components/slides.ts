@@ -2,6 +2,7 @@ import type { CSSProperties } from "vue"
 
 export const SlideWidth = 1776
 export const SlideHeight = 698
+export const SlideAssetBase = "http://127.0.0.1:9999/api/slides/assets"
 
 export type ElementKind = "text" | "rect" | "ellipse" | "image"
 
@@ -40,6 +41,16 @@ export interface SlideCollection {
   Id: string
   Name: string
   Slides: Slide[]
+}
+
+export function SlideImages(Collections: SlideCollection[]): string[] {
+  return Collections.flatMap(Collection =>
+    Collection.Slides.flatMap(Slide =>
+      Slide.Elements
+        .filter(Element => Element.Kind === "image" && !Element.Hidden && Element.Asset)
+        .map(Element => `${SlideAssetBase}/${Element.Asset}`)
+    )
+  )
 }
 
 function _Rounding(Element: SlideElement): string {
