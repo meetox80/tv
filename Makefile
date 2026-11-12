@@ -64,7 +64,7 @@ web-dev: $(WEB_SETUP)/node_modules/.bin/vite
 	cd $(WEB_SETUP) && bun run dev
 
 clean:
-	cargo clean --manifest-path src-tauri/Cargo.toml
+	cargo clean -p zstio-tv --manifest-path src-tauri/Cargo.toml
 	rm -rf node_modules dist src-tauri/target $(WEB_SETUP)/dist $(WEB_SETUP)/node_modules $(WEB_PANEL)/dist $(WEB_PANEL)/node_modules $(WEB_VOTE)/dist $(WEB_VOTE)/node_modules
 
 install:
