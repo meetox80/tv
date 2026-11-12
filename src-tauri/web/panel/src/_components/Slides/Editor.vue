@@ -16,7 +16,7 @@ import {
   SlideHeight, SlideWidth, Uid, type Slide, type SlideElement,
 } from "./model"
 
-const Props = defineProps<{ Id: string }>()
+const Props = defineProps<{ Id: string; Landing?: (Cover: Slide) => Promise<DOMRect | null> }>()
 
 const Emit = defineEmits<{ Close: []; Deleted: [] }>()
 
@@ -59,6 +59,12 @@ const _ImageMax = { W: 900, H: 560 }
 const _AllHandles: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"]
 const _TextHandles: Handle[] = ["e", "w"]
 const _Slide: Box = { X: 0, Y: 0, W: SlideWidth, H: SlideHeight }
+const _LeaveMs = 500
+const _LeaveClipMs = 320
+const _LeaveFadeMs = 160
+const _LeaveEase = "cubic-bezier(0.2, 0, 0, 1)"
+const _DismissMs = 240
+const _ThumbRadius = 10
 
 const Ready: Ref<boolean> = ref(false)
 const Missing: Ref<boolean> = ref(false)
@@ -84,6 +90,7 @@ const Guides: Ref<{ X: number[]; Y: number[] }> = ref({ X: [], Y: [] })
 const Dropping: Ref<boolean> = ref(false)
 const Deleting: Ref<boolean> = ref(false)
 const DeleteBusy: Ref<boolean> = ref(false)
+const Leaving: Ref<boolean> = ref(false)
 const CanUndo: Ref<boolean> = ref(false)
 const CanRedo: Ref<boolean> = ref(false)
 const Tv: Ref<TvState> = ref({
@@ -1102,7 +1109,7 @@ function _Typing(Target: EventTarget | null): boolean {
 }
 
 function _OnKey(Event: KeyboardEvent): void {
-  if (Deleting.value) return
+  if (Deleting.value || Leaving.value) return
   if (!RootEl.value?.contains(Event.target as Node)) Event.stopPropagation()
 
   const Mod = Event.ctrlKey || Event.metaKey
@@ -1253,10 +1260,61 @@ function _OnResize(): void {
   _Fit()
 }
 
+function _Settle(Run: Animation): Promise<void> {
+  return Run.finished.then(() => undefined, () => undefined)
+}
+
+async function _Target(): Promise<DOMRect | null> {
+  if (!Props.Landing || !Ready.value || !Slides.value.length) return null
+  const Box = await Props.Landing(Clone(Slides.value[0]))
+  if (!Box || !Box.width || Box.bottom <= 0 || Box.top >= window.innerHeight) return null
+  return Box
+}
+
+async function _Leave(Land: boolean): Promise<void> {
+  const Root = RootEl.value
+  if (!Root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+  const Target = Land ? await _Target() : null
+  const Canvas = CanvasEl.value?.getBoundingClientRect()
+  const Stage = StageEl.value?.getBoundingClientRect()
+
+  if (!Target || !Canvas || !Stage) {
+    await _Settle(Root.animate(
+      [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(0.98)" }],
+      { duration: _DismissMs, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" },
+    ))
+    return
+  }
+
+  const S = Target.width / Canvas.width
+  const Top = Math.max(Canvas.top, Stage.top)
+  const Left = Math.max(Canvas.left, Stage.left)
+  const Right = Math.max(window.innerWidth - Math.min(Canvas.right, Stage.right), 0)
+  const Bottom = Math.max(window.innerHeight - Math.min(Canvas.bottom, Stage.bottom), 0)
+  Root.style.transformOrigin = "0 0"
+  Root.animate(
+    [{ transform: "none" }, { transform: `translate(${Target.left - Canvas.left * S}px, ${Target.top - Canvas.top * S}px) scale(${S})` }],
+    { duration: _LeaveMs, easing: _LeaveEase, fill: "forwards" },
+  )
+  Root.animate(
+    [{ clipPath: "inset(0px 0px 0px 0px round 0px)" }, { clipPath: `inset(${Top}px ${Right}px ${Bottom}px ${Left}px round ${_ThumbRadius / S}px)` }],
+    { duration: _LeaveClipMs, easing: _LeaveEase, fill: "forwards" },
+  )
+  await _Settle(Root.animate(
+    [{ opacity: 1 }, { opacity: 0 }],
+    { duration: _LeaveFadeMs, delay: _LeaveMs - _LeaveFadeMs, easing: "ease-in", fill: "forwards" },
+  ))
+}
+
 async function Close(): Promise<void> {
+  if (Leaving.value) return
   StopEditing()
   End()
-  if (Ready.value && (_SaveTimer || Saving.value === "error")) await Flush()
+  Leaving.value = true
+  Select([])
+  Hovered.value = null
+  const Saved = Ready.value && (_SaveTimer || Saving.value === "error") ? Flush() : Promise.resolve(true)
+  await Promise.all([Saved, _Leave(true)])
   Emit("Close")
 }
 
@@ -1269,6 +1327,8 @@ async function ConfirmDelete(): Promise<void> {
     }
     await Api.Remove(Props.Id)
     Deleting.value = false
+    Leaving.value = true
+    await _Leave(false)
     Emit("Deleted")
   } catch (Caught) {
     Problem.value = Caught instanceof Error ? `Nie udało się usunąć: ${Caught.message}` : "Nie udało się usunąć."
@@ -1339,7 +1399,7 @@ onUnmounted(() => {
     <div
       ref="RootEl"
       class="Editor"
-      :class="{ Narrow }"
+      :class="{ Narrow, Leaving }"
       role="dialog"
       aria-modal="true"
       aria-label="Edytor slajdów"
@@ -1661,6 +1721,10 @@ onUnmounted(() => {
   background: var(--bg);
   color: var(--ink);
   animation: EditorIn 320ms var(--ease) both;
+}
+
+.Editor.Leaving {
+  pointer-events: none;
 }
 
 @keyframes EditorIn {

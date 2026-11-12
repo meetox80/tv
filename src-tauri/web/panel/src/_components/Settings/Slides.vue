@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, type Ref } from "vue"
+import { ref, computed, nextTick, onMounted, type ComponentPublicInstance, type Ref } from "vue"
 import { useI18n } from "../../i18n"
 import * as Api from "../../_api/slides"
-import type { CollectionSummary } from "../Slides/model"
+import type { CollectionSummary, Slide } from "../Slides/model"
 import Pane from "./ui/Pane.vue"
 import Group from "./ui/Group.vue"
 import Row from "./ui/Row.vue"
@@ -19,6 +19,7 @@ const Failed: Ref<boolean> = ref(false)
 const Creating: Ref<boolean> = ref(false)
 const Editing: Ref<string | null> = ref(null)
 const Problem: Ref<string> = ref("")
+const GridEl: Ref<ComponentPublicInstance | null> = ref(null)
 
 const _Date = new Intl.DateTimeFormat("pl", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
 
@@ -82,6 +83,15 @@ function Open(Id: string): void {
   Editing.value = Id
 }
 
+async function Landing(Cover: Slide): Promise<DOMRect | null> {
+  const Item = Items.value.find(I => I.Id === Editing.value)
+  if (!Item) return null
+  Item.Cover = Cover
+  await nextTick()
+  const Grid = GridEl.value?.$el as HTMLElement | undefined
+  return Grid?.querySelector(`[data-id="${Item.Id}"] .Thumb`)?.getBoundingClientRect() ?? null
+}
+
 function OnClosed(): void {
   Editing.value = null
   void _Refresh()
@@ -128,8 +138,8 @@ onMounted(() => {
       </Row>
 
       <Row v-else Block>
-        <TransitionGroup tag="div" name="card" class="Grid">
-          <button v-for="Item in Items" :key="Item.Id" type="button" class="Card" @click="Open(Item.Id)">
+        <TransitionGroup ref="GridEl" tag="div" name="card" class="Grid">
+          <button v-for="Item in Items" :key="Item.Id" type="button" class="Card" :data-id="Item.Id" @click="Open(Item.Id)">
             <Thumb :Slide="Item.Cover" />
             <span class="CardText">
               <span class="CardName">{{ Item.Name }}</span>
@@ -145,7 +155,7 @@ onMounted(() => {
       </template>
     </Group>
 
-    <Editor v-if="Editing" :key="Editing" :Id="Editing" @Close="OnClosed" @Deleted="OnClosed" />
+    <Editor v-if="Editing" :key="Editing" :Id="Editing" :Landing="Landing" @Close="OnClosed" @Deleted="OnClosed" />
   </Pane>
 </template>
 
