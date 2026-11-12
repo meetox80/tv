@@ -40,8 +40,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="relative min-h-screen bg-[#0B0B0C] text-text-primary antialiased overflow-hidden">
-    <div class="relative min-h-screen">
+  <div class="relative min-h-dvh antialiased overflow-x-hidden">
+    <div class="relative min-h-dvh">
       <Transition name="phase" mode="out-in" appear>
         <CodeEntry v-if="CurrentPhase === 'code'" key="code" @Accepted="OnCodeAccepted" />
         <Configurator v-else key="configurator" @Unauthorized="OnUnauthorized" />

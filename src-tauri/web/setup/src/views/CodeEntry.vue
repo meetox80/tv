@@ -2,6 +2,8 @@
 import { computed, nextTick, ref, type Ref } from "vue"
 import { useI18n } from "../i18n"
 import { SetToken } from "../session"
+import Icon from "../_components/Icon.vue"
+import Activity from "../_components/Activity.vue"
 
 const { t } = useI18n()
 
@@ -13,7 +15,7 @@ const Length = 6
 
 const Digits: Ref<string[]> = ref(Array(Length).fill(""))
 const Inputs: Ref<HTMLInputElement[]> = ref([])
-const Error: Ref<string> = ref("")
+const ErrorText: Ref<string> = ref("")
 const IsLoading: Ref<boolean> = ref(false)
 
 const Code = computed<string>(() => Digits.value.join(""))
@@ -42,14 +44,14 @@ function OnInput(Index: number, E: Event): void {
   const Raw = Target.value
   Target.value = Digits.value[Index]
 
-  Error.value = ""
+  ErrorText.value = ""
   Fill(Index, Raw)
 }
 
 function OnKeydown(Index: number, E: KeyboardEvent): void {
   if (E.key === "Backspace") {
     E.preventDefault()
-    Error.value = ""
+    ErrorText.value = ""
 
     const Next = [...Digits.value]
     if (Next[Index]) {
@@ -80,7 +82,7 @@ function OnKeydown(Index: number, E: KeyboardEvent): void {
 
 function OnPaste(Index: number, E: ClipboardEvent): void {
   E.preventDefault()
-  Error.value = ""
+  ErrorText.value = ""
   Fill(Index, E.clipboardData?.getData("text") ?? "")
 }
 
@@ -91,7 +93,7 @@ function MaybeSubmit(): void {
 async function Submit(): Promise<void> {
   if (Code.value.length !== Length || IsLoading.value) return
   IsLoading.value = true
-  Error.value = ""
+  ErrorText.value = ""
 
   try {
     const Res = await fetch("/api/auth", {
@@ -103,17 +105,17 @@ async function Submit(): Promise<void> {
     if (Res.ok) {
       const Data: { Token?: string } = await Res.json().catch(() => ({}))
       if (!Data.Token) {
-        Error.value = t("code.error.generic")
+        ErrorText.value = t("code.error.generic")
       } else {
         SetToken(Data.Token)
         Emit("Accepted", Data.Token)
         return
       }
     } else {
-      Error.value = Res.status === 401 ? t("code.error.wrong") : t("code.error.generic")
+      ErrorText.value = Res.status === 401 ? t("code.error.wrong") : t("code.error.generic")
     }
   } catch (_) {
-    Error.value = t("code.error.connection")
+    ErrorText.value = t("code.error.connection")
   }
 
   IsLoading.value = false
@@ -124,17 +126,18 @@ async function Submit(): Promise<void> {
 </script>
 
 <template>
-  <div class="setup-scroll min-h-screen flex items-center justify-center px-5 py-24 lg:px-10">
-    <main class="w-full max-w-[440px]">
-      <div class="mb-9">
-        <h1 class="font-display text-[38px] font-semibold leading-[1.05] tracking-[-0.035em] lg:text-[46px]">{{ t("code.title") }}</h1>
-        <p class="muted mt-3 max-w-[340px] text-[15px] leading-6">{{ t("code.subtitle") }}</p>
+  <div class="screen">
+    <main class="screen-body">
+      <div class="icon-tile">
+        <Icon Name="tv" />
       </div>
+      <h1 class="screen-title">{{ t("code.title") }}</h1>
+      <p class="screen-subtitle">{{ t("code.subtitle") }}</p>
 
-      <form class="setup-card" @submit.prevent="Submit">
-        <label for="pairing-code-0" class="muted mb-3 block text-[13px] font-medium">{{ t("code.label") }}</label>
+      <form class="screen-content" @submit.prevent="Submit">
+        <label for="pairing-code-0" class="sr-only">{{ t("code.label") }}</label>
 
-        <div class="flex justify-between gap-2.5">
+        <div class="digits" :class="{ 'is-error': ErrorText }">
           <input
             v-for="(Digit, Index) in Digits"
             :key="Index"
@@ -153,101 +156,85 @@ async function Submit(): Promise<void> {
             maxlength="1"
             :aria-label="`${t('code.label')} ${Index + 1}`"
             class="digit-box"
-            :class="[Error ? 'is-error' : '', Digit ? 'is-filled' : '']"
+            :class="{ 'is-filled': Digit, 'digit-split': Index === Length / 2 }"
           />
         </div>
 
-        <p v-if="Error" class="mt-4 text-[13px] font-medium text-accent">{{ Error }}</p>
+        <p v-if="ErrorText" class="form-error">{{ ErrorText }}</p>
 
-        <button type="submit" :disabled="Code.length !== Length || IsLoading" class="primary-button mt-5 w-full">
-          {{ IsLoading ? t("code.button.loading") : t("code.button") }}
-          <svg v-if="!IsLoading" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </button>
+        <div class="screen-actions">
+          <button type="submit" :disabled="Code.length !== Length || IsLoading" class="primary-button">
+            <Activity v-if="IsLoading" class="size-5" />
+            {{ IsLoading ? t("code.button.loading") : t("code.button") }}
+          </button>
+        </div>
       </form>
     </main>
   </div>
 </template>
 
 <style scoped>
-.setup-card {
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  padding: 26px;
-  box-shadow:
-    0 1px 0 rgb(var(--hairline) / 0.05) inset,
-    0 30px 60px -20px rgb(0 0 0 / 0.7);
+.digits {
+  display: flex;
+  gap: 8px;
+}
+
+.digits.is-error {
+  animation: shake 300ms ease;
 }
 
 .digit-box {
-  height: 72px;
+  height: 64px;
   min-width: 0;
   flex: 1;
   border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--sunken);
+  border-radius: 14px;
+  background: var(--group);
   color: rgb(var(--text));
   text-align: center;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   caret-color: transparent;
   outline: none;
-  box-shadow: 0 1px 0 rgb(var(--hairline) / 0.04) inset;
-  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  box-shadow: inset 0 0 0 1px rgb(var(--hairline) / 0.04);
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.digit-split {
+  margin-left: 10px;
 }
 
 .digit-box.is-filled {
-  background: var(--surface-raised);
+  background: var(--group-raised);
 }
 
 .digit-box:focus {
-  background: var(--surface-raised);
-  box-shadow: 0 0 0 2px rgb(var(--accent) / 0.75);
-  transform: translateY(-1px);
+  background: var(--group-raised);
+  box-shadow: inset 0 0 0 2px rgb(var(--hairline) / 0.6);
 }
 
-.digit-box.is-error {
-  box-shadow: 0 0 0 2px rgb(var(--accent) / 0.45);
-  animation: shake 260ms ease;
+.digits.is-error .digit-box {
+  box-shadow: inset 0 0 0 2px rgb(var(--danger) / 0.75);
 }
 
 .digit-box:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
 }
 
-.primary-button {
-  display: flex;
-  height: 54px;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: var(--radius-lg);
-  background: rgb(var(--text));
-  color: #0A0A0B;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  transition: opacity 160ms ease, transform 160ms ease;
-}
-
-.primary-button:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.primary-button:active:not(:disabled) {
-  transform: scale(0.985);
-}
-
-.primary-button:disabled {
-  pointer-events: none;
-  background: var(--surface-raised);
-  color: rgb(var(--text) / 0.3);
+@media (min-width: 640px) {
+  .digit-box {
+    height: 72px;
+    font-size: 32px;
+  }
 }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0) }
-  25% { transform: translateX(-4px) }
-  75% { transform: translateX(4px) }
+  25% { transform: translateX(-5px) }
+  75% { transform: translateX(5px) }
 }
 </style>

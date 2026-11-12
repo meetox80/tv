@@ -2,6 +2,8 @@
 import { ref, computed, watch, onUnmounted, type Ref, type ComputedRef } from "vue"
 import { useI18n } from "../i18n"
 import { Authed } from "../session"
+import Icon from "../_components/Icon.vue"
+import Activity from "../_components/Activity.vue"
 
 const { t } = useI18n()
 
@@ -11,15 +13,7 @@ const Emit = defineEmits<{
 
 type Step = "token" | "verifying" | "ports" | "password" | "done"
 
-const _Steps: Step[] = ["token", "verifying", "ports", "password", "done"]
 const _MinimumVerifyingMs: number = 650
-const _LabelKeys: Record<Step, string> = {
-  token: "config.step.token",
-  verifying: "config.step.verifying",
-  ports: "config.step.ports",
-  password: "config.step.password",
-  done: "config.step.done",
-}
 
 const CurrentStep: Ref<Step> = ref("token")
 const Token: Ref<string> = ref("")
@@ -33,11 +27,31 @@ const HostnameVerifying: Ref<boolean> = ref(false)
 const MgmtVerified: Ref<boolean | null> = ref(null)
 const VoteVerified: Ref<boolean | null> = ref(null)
 const HostnameError: Ref<string> = ref("")
+const Skipping: Ref<boolean> = ref(false)
+const SkipError: Ref<string> = ref("")
 
-const StepIndex: ComputedRef<number> = computed(() => _Steps.indexOf(CurrentStep.value))
+const LocalOnly: Ref<boolean> = ref(false)
+
+const Flow: ComputedRef<Step[]> = computed(() =>
+  LocalOnly.value ? ["token", "password"] : ["token", "ports", "password"]
+)
+
+const ProgressIndex: ComputedRef<number> = computed(() =>
+  Flow.value.indexOf(CurrentStep.value === "verifying" ? "token" : CurrentStep.value)
+)
+
+const ProgressLabel: ComputedRef<string> = computed(() =>
+  t("config.progress")
+    .replace("{n}", String(ProgressIndex.value + 1))
+    .replace("{total}", String(Flow.value.length))
+)
 
 const PasswordValid: ComputedRef<boolean> = computed(
   () => Password.value.length > 0 && Password.value === PasswordConfirm.value
+)
+
+const PasswordMismatch: ComputedRef<boolean> = computed(
+  () => PasswordConfirm.value.length > 0 && !PasswordValid.value
 )
 
 const CanVerifyHostnames: ComputedRef<boolean> = computed(
@@ -96,6 +110,33 @@ async function SubmitToken(): Promise<void> {
   } catch (_) {
     await _KeepVerifyingVisible(StartedAt)
     VerifyError.value = t("config.verifying.error.connection")
+  }
+}
+
+async function SkipTunnel(): Promise<void> {
+  if (Skipping.value) return
+  Skipping.value = true
+  SkipError.value = ""
+
+  try {
+    const Res = await Authed("/api/setup/local", { method: "POST" })
+
+    if (Res.status === 401) {
+      Emit("Unauthorized")
+      return
+    }
+
+    if (!Res.ok) {
+      SkipError.value = t("config.verifying.error.save")
+      return
+    }
+
+    LocalOnly.value = true
+    CurrentStep.value = "password"
+  } catch (_) {
+    SkipError.value = t("config.verifying.error.connection")
+  } finally {
+    Skipping.value = false
   }
 }
 
@@ -168,7 +209,7 @@ let _RedirectTimer: ReturnType<typeof setInterval> | null = null
 
 function _DashboardUrl(): string {
   const Host = MgmtHostname.value.trim()
-  if (!Host) return ""
+  if (!Host) return `http://${window.location.hostname}:9999`
   return Host.startsWith("http") ? Host : `https://${Host}`
 }
 
@@ -212,329 +253,358 @@ async function Finish(): Promise<void> {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col overflow-hidden px-5 lg:px-10">
-
-    <div class="mx-auto w-full max-w-[920px] shrink-0 pt-24 pb-5 lg:pt-28">
-      <div class="mb-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="text-xs muted">{{ t(_LabelKeys[CurrentStep]) }}</span>
-        </div>
-        <span class="text-[11px] tabular-nums subtle">{{ String(StepIndex + 1).padStart(2, '0') }} / {{ String(_Steps.length).padStart(2, '0') }}</span>
-      </div>
-      <div class="flex gap-1">
-        <div
-          v-for="(S, I) in _Steps"
+  <div class="screen">
+    <header
+      v-if="CurrentStep !== 'done'"
+      class="steps"
+      role="progressbar"
+      :aria-label="ProgressLabel"
+      aria-valuemin="1"
+      :aria-valuemax="Flow.length"
+      :aria-valuenow="ProgressIndex + 1"
+    >
+      <div class="steps-track">
+        <span
+          v-for="(S, I) in Flow"
           :key="S"
-          class="h-0.5 flex-1 rounded-full transition-all duration-500"
-          :class="I <= StepIndex ? 'bg-accent' : 'bg-white/8'"
+          class="steps-segment"
+          :class="{ 'is-filled': I <= ProgressIndex }"
         />
       </div>
-    </div>
+      <span class="steps-label">{{ ProgressLabel }}</span>
+    </header>
 
-    <div class="setup-scroll flex flex-1 items-center justify-center pb-10">
-      <div class="w-full max-w-[560px]">
-        <Transition name="slide" mode="out-in">
+    <div class="screen-stage">
+      <Transition name="slide" mode="out-in">
+        <section v-if="CurrentStep === 'token'" key="token" class="screen-body">
+          <div class="icon-tile">
+            <Icon Name="key" />
+          </div>
+          <h1 class="screen-title">{{ t("config.token.title") }}</h1>
+          <p class="screen-subtitle">{{ t("config.token.subtitle") }}</p>
 
-          <div v-if="CurrentStep === 'token'" key="token" class="setup-card flex flex-col">
-            <h1 class="font-display text-[30px] font-semibold tracking-[-0.035em]">{{ t("config.token.title") }}</h1>
-            <p class="mt-2.5 mb-7 text-sm leading-6 muted">{{ t("config.token.subtitle") }}</p>
-
-            <form @submit.prevent="SubmitToken">
+          <form class="screen-content" @submit.prevent="SubmitToken">
+            <div class="group">
               <textarea
                 v-model="Token"
-                rows="3"
+                rows="4"
                 spellcheck="false"
                 autocomplete="off"
                 autocapitalize="off"
                 autocorrect="off"
                 placeholder="cloudflared.exe service install eyJ..."
-                class="setup-input token-input font-mono"
+                class="field token-field"
                 @keydown.enter.exact.prevent="SubmitToken"
               />
-
-              <button type="submit" :disabled="!Token.trim()" class="primary-button mt-5 w-full">
-                {{ t("config.token.continue") }}
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-              </button>
-            </form>
+            </div>
 
             <a
               href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-remote-tunnel/"
               target="_blank"
               rel="noopener"
-              class="mt-3 flex items-center gap-1 text-xs muted transition-colors hover:text-accent"
+              class="help-link"
             >
               {{ t("config.token.help") }}
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-              </svg>
+              <Icon Name="external" class="size-3.5" />
             </a>
 
-          </div>
+            <div class="screen-actions">
+              <button type="submit" :disabled="!Token.trim()" class="primary-button">
+                {{ t("config.token.continue") }}
+              </button>
+              <button type="button" :disabled="Skipping" class="text-button" @click="SkipTunnel">
+                <Activity v-if="Skipping" class="size-4" />
+                {{ t("config.token.skip") }}
+              </button>
+            </div>
 
-          <div v-else-if="CurrentStep === 'verifying'" key="verifying" class="setup-card flex flex-col items-center">
-            <template v-if="!VerifyError">
-              <div class="w-14 h-14 rounded-full border-2 border-white/8 border-t-accent animate-spin mb-5" />
-              <p class="text-sm muted">{{ t("config.verifying.saving") }}</p>
-            </template>
+            <p v-if="SkipError" class="form-error">{{ SkipError }}</p>
+          </form>
+        </section>
 
-            <template v-else>
-              <svg class="w-8 h-8 text-accent mb-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-              </svg>
-              <p class="text-accent text-sm font-medium mb-4">{{ VerifyError }}</p>
-              <button
-                @click="CurrentStep = 'token'"
-                class="secondary-button"
-              >
+        <section v-else-if="CurrentStep === 'verifying'" key="verifying" class="screen-body">
+          <template v-if="!VerifyError">
+            <div class="icon-tile">
+              <Activity class="size-7" />
+            </div>
+            <h1 class="screen-title">{{ t("config.verifying.title") }}</h1>
+            <p class="screen-subtitle">{{ t("config.verifying.saving") }}</p>
+          </template>
+
+          <template v-else>
+            <div class="icon-tile is-danger">
+              <Icon Name="alert" />
+            </div>
+            <h1 class="screen-title">{{ t("config.verifying.error.title") }}</h1>
+            <p class="screen-subtitle">{{ VerifyError }}</p>
+
+            <div class="screen-actions mt-8">
+              <button type="button" class="secondary-button" @click="CurrentStep = 'token'">
                 {{ t("config.verifying.back") }}
               </button>
-            </template>
+            </div>
+          </template>
+        </section>
+
+        <section v-else-if="CurrentStep === 'ports'" key="ports" class="screen-body">
+          <div class="icon-tile">
+            <Icon Name="globe" />
           </div>
+          <h1 class="screen-title">{{ t("config.ports.title") }}</h1>
+          <p class="screen-subtitle">{{ t("config.ports.subtitle") }}</p>
 
-          <div v-else-if="CurrentStep === 'ports'" key="ports" class="setup-card flex flex-col">
-            <h1 class="font-display text-[30px] font-semibold tracking-[-0.035em]">{{ t("config.ports.title") }}</h1>
-            <p class="mt-2.5 mb-7 max-w-[460px] text-sm leading-6 muted">{{ t("config.ports.subtitle") }}</p>
-
-            <div class="w-full space-y-3">
-              <div class="setup-field" :class="MgmtVerified === true ? 'verified' : MgmtVerified === false ? 'invalid' : ''">
-                <div class="flex items-center justify-between mb-2">
-                  <div>
-                    <p class="text-sm font-medium">{{ t("config.ports.management") }}</p>
-                    <p class="text-xs subtle">{{ t("config.ports.management.desc") }}</p>
-                  </div>
-                  <span class="text-[11px] tabular-nums subtle">http://127.0.0.1:9999</span>
+          <form class="screen-content space-y-3" @submit.prevent="VerifyHostnames">
+            <div class="group" :class="{ 'is-success': MgmtVerified === true, 'is-danger': MgmtVerified === false }">
+              <div class="host-head">
+                <div class="min-w-0">
+                  <p class="host-name">{{ t("config.ports.management") }}</p>
+                  <p class="host-desc">{{ t("config.ports.management.desc") }}</p>
                 </div>
+                <span class="host-target">http://127.0.0.1:9999</span>
+              </div>
+              <div class="group-divider" />
+              <div class="host-row">
                 <input
                   v-model="MgmtHostname"
                   :placeholder="t('config.ports.hostname.placeholder')"
-                  class="setup-input"
+                  inputmode="url"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  class="field"
                 />
+                <Icon v-if="MgmtVerified === true" Name="check" class="host-mark text-success" />
+                <Icon v-else-if="MgmtVerified === false" Name="close" class="host-mark text-danger" />
               </div>
+            </div>
 
-              <div class="setup-field" :class="VoteVerified === true ? 'verified' : VoteVerified === false ? 'invalid' : ''">
-                <div class="flex items-center justify-between mb-2">
-                  <div>
-                    <p class="text-sm font-medium">{{ t("config.ports.voting") }}</p>
-                    <p class="text-xs subtle">{{ t("config.ports.voting.desc") }}</p>
-                  </div>
-                  <span class="text-[11px] tabular-nums subtle">http://127.0.0.1:10000</span>
+            <div class="group" :class="{ 'is-success': VoteVerified === true, 'is-danger': VoteVerified === false }">
+              <div class="host-head">
+                <div class="min-w-0">
+                  <p class="host-name">{{ t("config.ports.voting") }}</p>
+                  <p class="host-desc">{{ t("config.ports.voting.desc") }}</p>
                 </div>
+                <span class="host-target">http://127.0.0.1:10000</span>
+              </div>
+              <div class="group-divider" />
+              <div class="host-row">
                 <input
                   v-model="VoteHostname"
                   :placeholder="t('config.ports.hostname.placeholder')"
-                  class="setup-input"
+                  inputmode="url"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  class="field"
                 />
+                <Icon v-if="VoteVerified === true" Name="check" class="host-mark text-success" />
+                <Icon v-else-if="VoteVerified === false" Name="close" class="host-mark text-danger" />
               </div>
             </div>
 
-            <p v-if="HostnameError" class="text-accent text-xs mt-3 text-center">{{ HostnameError }}</p>
+            <p v-if="HostnameError" class="form-error">{{ HostnameError }}</p>
 
-            <button
-              @click="VerifyHostnames"
-              :disabled="!CanVerifyHostnames"
-              class="primary-button mt-5 w-full"
-            >
-              <div v-if="HostnameVerifying" class="w-4 h-4 rounded-full border-2 border-current/30 border-t-current animate-spin" />
-              {{ HostnameVerifying ? t("config.ports.verifying") : t("config.ports.verify") }}
-            </button>
+            <div class="screen-actions">
+              <button type="submit" :disabled="!CanVerifyHostnames" class="primary-button">
+                <Activity v-if="HostnameVerifying" class="size-5" />
+                {{ HostnameVerifying ? t("config.ports.verifying") : t("config.ports.verify") }}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section v-else-if="CurrentStep === 'password'" key="password" class="screen-body">
+          <div class="icon-tile">
+            <Icon Name="lock" />
           </div>
+          <h1 class="screen-title">{{ t("config.password.title") }}</h1>
+          <p class="screen-subtitle">{{ t("config.password.subtitle") }}</p>
 
-          <div v-else-if="CurrentStep === 'password'" key="password" class="setup-card flex flex-col">
-            <h1 class="font-display text-[30px] font-semibold tracking-[-0.035em]">{{ t("config.password.title") }}</h1>
-            <p class="mt-2.5 mb-7 text-sm leading-6 muted">{{ t("config.password.subtitle") }}</p>
-
-            <div class="w-full space-y-3">
+          <form class="screen-content" @submit.prevent="Finish">
+            <div class="group" :class="{ 'is-danger': PasswordMismatch }">
               <input
                 v-model="Password"
                 type="password"
+                autocomplete="new-password"
                 :placeholder="t('config.password.placeholder')"
-                class="setup-input h-14"
+                class="field"
               />
+              <div class="group-divider" />
               <input
                 v-model="PasswordConfirm"
                 type="password"
+                autocomplete="new-password"
                 :placeholder="t('config.password.confirm')"
-                class="setup-input h-14"
-                :class="PasswordConfirm && !PasswordValid ? 'is-invalid' : ''"
+                class="field"
               />
             </div>
 
-            <button
-              @click="Finish"
-              :disabled="!PasswordValid"
-              class="primary-button mt-5 w-full"
-            >
-              {{ t("config.password.finish") }}
-            </button>
-          </div>
+            <p v-if="PasswordMismatch" class="form-error">{{ t("config.password.mismatch") }}</p>
 
-          <div v-else key="done" class="setup-card flex flex-col items-center text-center">
-            <div class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-6 done-icon">
-              <svg class="w-8 h-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path class="checkmark-path" stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-              </svg>
+            <div class="screen-actions">
+              <button type="submit" :disabled="!PasswordValid" class="primary-button">
+                {{ t("config.password.finish") }}
+              </button>
             </div>
+          </form>
+        </section>
 
-            <h1 class="text-2xl font-semibold mb-2">{{ t("config.done.title") }}</h1>
-            <p class="muted text-sm text-center mb-6 max-w-[280px]">{{ t("config.done.subtitle") }}</p>
-            <div class="px-3 py-1.5 rounded-full bg-white/5 subtle text-[12px] font-medium text-center tabular-nums">
-              {{ t("config.done.redirect").replace("{s}", String(RedirectCountdown)) }}
-            </div>
+        <section v-else key="done" class="screen-body">
+          <div class="icon-tile is-success done-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path class="checkmark-path" d="m5 12.5 4.5 4.5L19 7.5" />
+            </svg>
           </div>
-
-        </Transition>
-      </div>
+          <h1 class="screen-title">{{ t("config.done.title") }}</h1>
+          <p class="screen-subtitle">{{ t("config.done.subtitle") }}</p>
+          <span class="countdown">
+            {{ t("config.done.redirect").replace("{s}", String(RedirectCountdown)) }}
+          </span>
+        </section>
+      </Transition>
     </div>
   </div>
 </template>
 
 <style scoped>
-.setup-card {
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  padding: 28px;
-  box-shadow:
-    0 1px 0 rgb(var(--hairline) / 0.05) inset,
-    0 30px 60px -20px rgb(0 0 0 / 0.7);
+.steps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
-.primary-button {
+.steps-track {
   display: flex;
-  height: 54px;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: var(--radius-lg);
+  gap: 6px;
+}
+
+.steps-segment {
+  width: 28px;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgb(var(--hairline) / 0.14);
+  transition: background 400ms var(--ease-smooth);
+}
+
+.steps-segment.is-filled {
   background: rgb(var(--text));
-  color: #0A0A0B;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  transition: opacity 160ms ease, transform 160ms ease;
 }
 
-.primary-button:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.primary-button:active:not(:disabled) {
-  transform: scale(0.985);
-}
-
-.primary-button:disabled {
-  pointer-events: none;
-  background: var(--surface-raised);
-  color: rgb(var(--text) / 0.3);
-}
-
-.secondary-button {
-  display: flex;
-  height: 46px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 20px;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--surface-raised);
-  color: rgb(var(--text) / 0.85);
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 160ms ease, color 160ms ease;
-}
-
-.secondary-button:hover {
-  background: #232328;
-  color: rgb(var(--text));
-}
-
-.setup-input {
-  width: 100%;
-  height: 50px;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--sunken);
-  padding: 0 14px;
-  color: rgb(var(--text));
-  font-size: 14px;
-  outline: none;
-  box-shadow: 0 1px 0 rgb(var(--hairline) / 0.04) inset;
-  transition: background 160ms ease, box-shadow 160ms ease;
-}
-
-.setup-input::placeholder {
-  color: rgb(var(--text) / 0.28);
-}
-
-.setup-input:focus {
-  background: var(--surface-raised);
-  box-shadow: 0 0 0 2px rgb(var(--accent) / 0.7);
-}
-
-.setup-input.is-invalid {
-  box-shadow: 0 0 0 2px rgb(var(--accent) / 0.5);
-}
-
-.token-input {
-  display: block;
-  height: auto;
-  padding: 13px 14px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+.steps-label {
+  color: rgb(var(--text) / 0.5);
   font-size: 13px;
-  line-height: 1.6;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.token-field {
   resize: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.55;
   word-break: break-all;
 }
 
-.setup-field {
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: rgb(var(--hairline) / 0.03);
-  padding: 15px;
-  transition: background 160ms ease, box-shadow 160ms ease;
+.help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 0 4px;
+  color: rgb(var(--text) / 0.6);
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 160ms ease;
 }
 
-.setup-field.verified {
-  box-shadow: 0 0 0 1px rgb(var(--success) / 0.45);
+.help-link:hover {
+  color: rgb(var(--text));
 }
 
-.setup-field.invalid {
-  box-shadow: 0 0 0 1px rgb(var(--accent) / 0.45);
+.host-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
 }
 
-@media (max-width: 520px) {
-  .setup-card {
-    padding: 22px;
-  }
+.host-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.host-desc {
+  margin-top: 2px;
+  color: rgb(var(--text) / 0.5);
+  font-size: 13px;
+}
+
+.host-target {
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgb(var(--hairline) / 0.06);
+  padding: 4px 8px;
+  color: rgb(var(--text) / 0.6);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  user-select: text;
+}
+
+.host-row {
+  display: flex;
+  align-items: center;
+}
+
+.host-mark {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-right: 16px;
+}
+
+.countdown {
+  margin-top: 24px;
+  border-radius: 9999px;
+  background: rgb(var(--hairline) / 0.08);
+  padding: 8px 14px;
+  color: rgb(var(--text) / 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .slide-enter-active,
 .slide-leave-active {
-  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 320ms var(--ease-smooth),
+    transform 320ms var(--ease-smooth);
 }
 
 .slide-enter-from {
   opacity: 0;
-  transform: translateX(40px);
+  transform: translateX(28px);
 }
 
 .slide-leave-to {
   opacity: 0;
-  transform: translateX(-40px);
+  transform: translateX(-28px);
 }
 
 .done-icon {
-  animation: pop 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: pop 450ms var(--ease-smooth) both;
 }
 
 .checkmark-path {
-  stroke-dasharray: 30;
-  stroke-dashoffset: 30;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
   animation: draw 500ms 200ms ease forwards;
 }
 
 @keyframes pop {
-  0% { transform: scale(0); opacity: 0 }
+  0% { transform: scale(0.6); opacity: 0 }
   100% { transform: scale(1); opacity: 1 }
 }
 

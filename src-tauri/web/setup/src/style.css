@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Inter";
+  src: url("./assets/fonts/Inter-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
-  --bg: #08080A;
-  --surface: #131316;
-  --surface-raised: #1B1B1F;
-  --sunken: #0E0E11;
-  --text: 250 250 251;
-  --accent: 232 93 85;
-  --success: 61 214 140;
+  --bg: #0b0b0c;
+  --group: #1c1c1e;
+  --group-raised: #2c2c2e;
+  --text: 245 245 247;
   --hairline: 255 255 255;
+  --danger: 255 69 58;
+  --success: 48 209 88;
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-surface-raised: var(--surface-raised);
-  --color-sunken: var(--sunken);
+  --color-group: var(--group);
   --color-text: rgb(var(--text));
-  --color-accent: rgb(var(--accent));
+  --color-danger: rgb(var(--danger));
   --color-success: rgb(var(--success));
 
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-
-  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Geist", sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 * {
@@ -47,8 +48,8 @@ body,
 body {
   background: var(--bg);
   color: rgb(var(--text));
-  font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-image: radial-gradient(90rem 50rem at 50% -20rem, rgb(var(--accent) / 0.07), transparent 60%);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-image: radial-gradient(60rem 36rem at 50% -18rem, rgb(var(--hairline) / 0.06), transparent 70%);
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
@@ -59,6 +60,10 @@ body {
   button {
     font: inherit;
   }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 input,
@@ -66,17 +71,234 @@ textarea {
   user-select: text;
 }
 
-.muted {
-  color: rgb(var(--text) / 0.52);
-}
+@layer components {
+  .screen {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    align-items: center;
+    padding: calc(env(safe-area-inset-top) + 28px) 20px calc(env(safe-area-inset-bottom) + 32px);
+  }
 
-.subtle {
-  color: rgb(var(--text) / 0.34);
-}
+  .screen-stage {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+  }
 
-@media (max-height: 620px) {
-  .setup-scroll {
-    align-items: flex-start;
-    overflow-y: auto;
+  .screen-body {
+    display: flex;
+    width: 100%;
+    max-width: 400px;
+    flex-direction: column;
+    align-items: center;
+    margin-block: auto;
+    text-align: center;
+  }
+
+  .icon-tile {
+    display: grid;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #2c2c2e 0%, #1c1c1e 100%);
+    color: rgb(var(--text));
+    box-shadow:
+      inset 0 1px 0 rgb(var(--hairline) / 0.09),
+      0 14px 32px -14px rgb(0 0 0 / 0.9);
+  }
+
+  .icon-tile > svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .icon-tile.is-success {
+    background: rgb(var(--success) / 0.14);
+    color: rgb(var(--success));
+    box-shadow: none;
+  }
+
+  .icon-tile.is-danger {
+    background: rgb(var(--danger) / 0.14);
+    color: rgb(var(--danger));
+    box-shadow: none;
+  }
+
+  .screen-title {
+    margin-top: 22px;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  .screen-subtitle {
+    margin-top: 10px;
+    max-width: 340px;
+    font-size: 15px;
+    line-height: 1.45;
+    color: rgb(var(--text) / 0.66);
+    text-wrap: balance;
+  }
+
+  .screen-content {
+    width: 100%;
+    margin-top: 28px;
+    text-align: left;
+  }
+
+  .screen-actions {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 24px;
+  }
+
+  .group {
+    border-radius: 16px;
+    background: var(--group);
+    box-shadow: inset 0 0 0 1px rgb(var(--hairline) / 0.07);
+    transition: box-shadow 160ms ease;
+  }
+
+  .group:focus-within {
+    box-shadow: inset 0 0 0 1.5px rgb(var(--hairline) / 0.34);
+  }
+
+  .group.is-danger {
+    box-shadow: inset 0 0 0 1.5px rgb(var(--danger) / 0.75);
+  }
+
+  .group.is-success {
+    box-shadow: inset 0 0 0 1.5px rgb(var(--success) / 0.65);
+  }
+
+  .group-divider {
+    height: 1px;
+    margin-left: 16px;
+    background: rgb(var(--hairline) / 0.1);
+  }
+
+  .field {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 15px 16px;
+    color: rgb(var(--text));
+    font-size: 16px;
+    line-height: 1.4;
+    outline: none;
+  }
+
+  .field::placeholder {
+    color: rgb(var(--text) / 0.4);
+  }
+
+  .primary-button {
+    display: flex;
+    width: 100%;
+    height: 52px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 9999px;
+    background: rgb(var(--text));
+    color: var(--bg);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition:
+      opacity 160ms ease,
+      transform 160ms ease,
+      background 160ms ease,
+      color 160ms ease;
+  }
+
+  .primary-button:hover:not(:disabled) {
+    opacity: 0.92;
+  }
+
+  .primary-button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .primary-button:disabled {
+    background: rgb(var(--hairline) / 0.12);
+    color: rgb(var(--text) / 0.45);
+  }
+
+  .secondary-button {
+    display: flex;
+    width: 100%;
+    height: 52px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 9999px;
+    background: rgb(var(--hairline) / 0.1);
+    color: rgb(var(--text));
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition:
+      background 160ms ease,
+      transform 160ms ease;
+  }
+
+  .secondary-button:hover {
+    background: rgb(var(--hairline) / 0.14);
+  }
+
+  .secondary-button:active {
+    transform: scale(0.98);
+  }
+
+  .text-button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 9999px;
+    padding: 0 14px;
+    color: rgb(var(--text) / 0.72);
+    font-size: 15px;
+    font-weight: 500;
+    transition:
+      color 160ms ease,
+      background 160ms ease;
+  }
+
+  .text-button:hover:not(:disabled) {
+    background: rgb(var(--hairline) / 0.06);
+    color: rgb(var(--text));
+  }
+
+  .text-button:disabled {
+    opacity: 0.5;
+  }
+
+  .form-error {
+    margin-top: 12px;
+    color: rgb(var(--danger));
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  @media (min-width: 640px) {
+    .screen-title {
+      font-size: 32px;
+    }
   }
 }

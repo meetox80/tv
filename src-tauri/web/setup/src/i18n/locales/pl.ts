@@ -8,18 +8,17 @@ const _Pl: Record<string, string> = {
   "code.button": "Połącz",
   "code.button.loading": "Sprawdzam...",
 
-  "config.step.token": "Token tunelu",
-  "config.step.verifying": "Sprawdzanie",
-  "config.step.ports": "Publiczne hosty",
-  "config.step.password": "Hasło admina",
-  "config.step.done": "Gotowe",
+  "config.progress": "Krok {n} z {total}",
 
   "config.token.title": "Token tunelu",
   "config.token.subtitle": "Wklej token tunelu z Cloudflare",
   "config.token.help": "Skąd wziąć token?",
   "config.token.continue": "Dalej",
+  "config.token.skip": "Pomiń, tylko sieć lokalna",
 
+  "config.verifying.title": "Sprawdzanie",
   "config.verifying.saving": "Sprawdzam połączenie z tunelem...",
+  "config.verifying.error.title": "Coś poszło nie tak",
   "config.verifying.error.save": "Nie udało się zapisać",
   "config.verifying.error.connection": "Brak połączenia",
   "config.verifying.back": "Wróć",
@@ -39,6 +38,7 @@ const _Pl: Record<string, string> = {
   "config.password.subtitle": "Ustaw hasło do panelu zarządzania",
   "config.password.placeholder": "Hasło",
   "config.password.confirm": "Powtórz hasło",
+  "config.password.mismatch": "Hasła się różnią",
   "config.password.finish": "Gotowe",
 
   "config.done.title": "Wszystko gotowe!",
