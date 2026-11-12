@@ -22,6 +22,15 @@ pub async fn SetPassword(
     StatusCode::OK
 }
 
+pub async fn UseLocal(State(AppState): State<Arc<AppState>>) -> StatusCode {
+    for Key in ["tunnel_token", "management_hostname", "voting_hostname"] {
+        AppState.Db.Set(Key, "");
+    }
+    AppState.SetSetupStage(SetupStage::Password);
+    log!(Server, Info, "tunnel skipped, local only");
+    StatusCode::OK
+}
+
 pub async fn Connect(State(AppState): State<Arc<AppState>>) -> StatusCode {
     AppState.ClientConnected.store(true, std::sync::atomic::Ordering::Relaxed);
     StatusCode::OK

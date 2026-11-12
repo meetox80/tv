@@ -82,6 +82,7 @@ pub fn _CreateRouter(AppState: Arc<AppState>) -> Router {
         .route("/api/auth/check", post(auth::CheckSession))
         .route("/api/cloudflared", get(cloudflared::GetConfig).post(cloudflared::SaveConfig))
         .route("/api/cloudflared/verify", post(cloudflared::VerifyHostnames))
+        .route("/api/setup/local", post(setup::UseLocal))
         .route("/api/setup/password", post(setup::SetPassword))
         .layer(axum::middleware::from_fn_with_state(
             Arc::clone(&AppState),
